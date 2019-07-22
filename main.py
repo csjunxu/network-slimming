@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-# from torch.optim.lr_scheduler import MultiStepLR # added by JX@2019-7-21
+from torch.optim.lr_scheduler import MultiStepLR, CosineAnnealingLR # added by XJ@2019.07.21
 from torchvision import datasets, transforms
 from torch.autograd import Variable
 import models
@@ -109,9 +109,9 @@ if args.cuda:
     model.cuda()
 
 optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
-#optimizer = optim.Adam(model.parameters(), lr=args.lr) # added by JX@2019-7-21
-#scheduler = MultiStepLR(optimizer, milestones=[30,60,90], gamma=0.2) # learning rate # added by JX@2019-7-21
-if args.resume:
+#optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=args.weight_decay)
+#scheduler = MultiStepLR(optimizer, milestones=[args.epochs*0.25, args.epochs*0.5, args.epochs*0.75], gamma=0.2)  # added by XJ@2019.07.21
+scheduler = CosineAnnealingLR(optimizer, args.epochs, eta_min=0, last_epoch=-1)if args.resume:
     if os.path.isfile(args.resume):
         print("=> loading checkpoint '{}'".format(args.resume))
         checkpoint = torch.load(args.resume)
@@ -175,10 +175,10 @@ def save_checkpoint(state, is_best, filepath):
 
 best_prec1 = 0.
 for epoch in range(args.start_epoch, args.epochs):
-    if epoch in [args.epochs*0.5, args.epochs*0.75]:
-        for param_group in optimizer.param_groups:
-            param_group['lr'] *= 0.1
-    #schedular.step(epoch) # added by JX@2019-7-21
+    #if epoch in [args.epochs*0.5, args.epochs*0.75]:
+    #    for param_group in optimizer.param_groups:
+    #        param_group['lr'] *= 0.1
+    scheduler.step(epoch)  # step to the learning rate in this epoch
     train(epoch)
     prec1 = test()
     is_best = prec1 > best_prec1
